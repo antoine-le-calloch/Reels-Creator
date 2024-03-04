@@ -2,6 +2,7 @@
 import json
 import requests
 import html_to_json
+import re
 from bs4 import BeautifulSoup
 from .youtube import get_youtube
 
@@ -38,54 +39,52 @@ def get_most_replayed_infos(video_id):
         # HTTP request to get the HTML
         response = requests.get(video_url, headers=headers)
         response.raise_for_status()
-        html_string = response.text
 
-        pageInJson = html_to_json.convert(html_string)
-        # print((pageInJson['html']).keys())
-        for key, value in pageInJson.items():
-            print(value)
+        # Convert HTML to an object
+        html_object = BeautifulSoup(response.text, 'html.parser')
 
+        # Find 'ytInitialData' in the HTML
+        ytInitialData_script = html_object.find('script', string=re.compile('ytInitialData'))
+        if ytInitialData_script is None:
+            print("Error: most replayed information not found!")
+            return
 
-        # Analyse du contenu HTML avec BeautifulSoup
-        soup = BeautifulSoup(response.content, 'html.parser')
+        # Extract is value
+        match = re.search(r'ytInitialData\s*=\s*([^;]+);', ytInitialData_script.string)
+        if match is None:
+            print("Error: ytInitialData format does not match!")
+            return
+        ytInitialData = json.loads(match.group(1))
 
-        # Recherche de la balise <script> contenant 'ytplayer.config' dans le HTML
-        script_tag = soup.find('script', text=lambda text: text and 'ytplayer.config' in text)
+        # Extraction of 'replayedInfo' if necessary key are available
+        if 'frameworkUpdates' in ytInitialData and 'entityBatchUpdate' in ytInitialData['frameworkUpdates']:
+            mutations = ytInitialData['frameworkUpdates']['entityBatchUpdate']['mutations']
+            for mutation in mutations:
+                if 'payload' in mutation:
+                    payload = mutation['payload']
+                    break
+            else:
+                print("Error: payload not found!")
+                return
 
+            replayed_info = payload['macroMarkersListEntity']['markersList']
+            # # Removing durationMillis and extract startMillis markers
+            # for marker in replayed_info['markers']:
+            #     del marker['durationMillis']
+            #     marker['startMillis'] = int(marker['startMillis'])
 
-        if 0:
-            for script_tag in script_tags:
-                # Get start and end of the JSON chain
-                json_start = script_tag.string.find('{')
-                json_end = script_tag.string.rfind('}') + 1
+            # Extract timed decoration and removing decoration markers
+            replayed_info['timedMarkerDecorations'] = replayed_info['markersDecoration'][
+                'timedMarkerDecorations']
+            for marker_decoration in replayed_info['timedMarkerDecorations']:
+                for key in ['label', 'icon', 'decorationTimeMillis']:
+                    del marker_decoration[key]
 
-                if json_start != -1 and json_end != -1:
-                    # Extraction and conversion to Python object
-                    json_content = script_tag.string[json_start:json_end]
-                    data = json.loads(json_content)
+            # Removing not needed key
+            for key in ['markerType', 'markersMetadata', 'markersDecoration']:
+                del replayed_info[key]
 
-                    # Extraction of 'replayedInfo' if necessary key are available
-                    if 'frameworkUpdates' in data and 'entityBatchUpdate' in data['frameworkUpdates']:
-                        replayed_info = data['frameworkUpdates']['entityBatchUpdate']['mutations'][0]['payload']['macroMarkersListEntity'][
-                            'markersList']
-
-                        # # Removing durationMillis and extract startMillis markers
-                        # for marker in replayed_info['markers']:
-                        #     del marker['durationMillis']
-                        #     marker['startMillis'] = int(marker['startMillis'])
-
-                        # Extract timed decoration and removing decoration markers
-                        replayed_info['timedMarkerDecorations'] = replayed_info['markersDecoration'][
-                            'timedMarkerDecorations']
-                        for marker_decoration in replayed_info['timedMarkerDecorations']:
-                            for key in ['label', 'icon', 'decorationTimeMillis']:
-                                del marker_decoration[key]
-
-                        # Removing not needed key
-                        for key in ['markerType', 'markersMetadata', 'markersDecoration']:
-                            del replayed_info[key]
-
-                        return replayed_info
+            print(replayed_info)
 
     except requests.RequestException as e:
         print(f"Une erreur s'est produite lors de la récupération de la page : {e}")
