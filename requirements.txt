@@ -1,0 +1,2 @@
+svgpathtools~=1.6.1
+beautifulsoup4~=4.12.3
