@@ -1,7 +1,6 @@
 # processVideo.py
 import json
 import requests
-import html_to_json
 import re
 from bs4 import BeautifulSoup
 from .youtube import get_youtube
@@ -21,12 +20,6 @@ def get_most_replayed_moment(query):
     video_id = response['items'][0]['id']['videoId']
 
     get_most_replayed_infos(video_id)
-
-    # if video_json is not None:
-    #     formatted_json = json.dumps(video_json, indent=2)
-    #     print(formatted_json)
-    # else:
-    #     print("Unable to retrieve video information.")
 
 
 def get_most_replayed_infos(video_id):
