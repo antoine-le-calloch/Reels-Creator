@@ -1,5 +1,4 @@
 from bs4 import BeautifulSoup
-import os
 
 from bezier_curve import get_points_from_svg_divs
 from youtube import get_youtube_clip
