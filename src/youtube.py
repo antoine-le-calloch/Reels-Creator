@@ -20,7 +20,7 @@ def get_youtube_page_content(video_id):
     return response.text
 
 
-def get_most_replayed_graph(video_id):
+def get_most_replayed_points(video_id):
     page_content = get_youtube_page_content(video_id)
     html_object = BeautifulSoup(page_content, 'html.parser')
 
