@@ -1,21 +1,12 @@
-from bs4 import BeautifulSoup
-
-from bezier_curve import get_points_from_svg_divs
-from youtube import get_youtube_clip
 from graph import draw_graph
+from youtube import (
+    get_most_replayed_infos,
+    get_most_replayed_points
+)
 
 if __name__ == '__main__':
-    youtube_clip = get_youtube_clip('x7bDk4Jvh6s')
-    if youtube_clip is None:
-        print("Error: unable to retrieve the video clip.")
-        exit(1)
+    most_replayed_infos = get_most_replayed_infos('x7bDk4Jvh6s')
+    draw_graph([[info['startMillis'], info['intensityScoreNormalized']] for info in most_replayed_infos['markers']])
 
-    html_object = BeautifulSoup(youtube_clip, 'html.parser')
-    heat_map = html_object.find(class_='ytp-chrome-bottom')
-    if heat_map is None:
-        print("Error: heat map not found for this video.")
-        exit(1)
-
-    path_divs = heat_map.find_all('path')
-    points = get_points_from_svg_divs(path_divs)
-    draw_graph(points)
+    most_replayed_points = get_most_replayed_points('x7bDk4Jvh6s')
+    draw_graph(most_replayed_points)
